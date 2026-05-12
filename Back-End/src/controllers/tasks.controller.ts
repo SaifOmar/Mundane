@@ -90,3 +90,61 @@ export async function deleteTask(req: Request, res: Response): Promise<void> {
   await prisma.task.delete({ where: { id } });
   res.json({ success: true });
 }
+
+export async function batchCompleteTasks(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const { ids } = req.body as { ids: string[] };
+
+  if (!ids?.length) {
+    res.status(400).json({ success: false, error: 'No task IDs provided' });
+    return;
+  }
+
+  await prisma.task.updateMany({
+    where: { id: { in: ids }, userId },
+    data: { status: 'DONE', completedAt: new Date().toISOString() },
+  });
+
+  res.json({ success: true });
+}
+
+export async function batchDeleteTasks(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const { ids } = req.body as { ids: string[] };
+
+  if (!ids?.length) {
+    res.status(400).json({ success: false, error: 'No task IDs provided' });
+    return;
+  }
+
+  await prisma.task.deleteMany({
+    where: { id: { in: ids }, userId },
+  });
+
+  res.json({ success: true });
+}
+
+export async function duplicateTask(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const id = getParamId(req.params);
+
+  const original = await prisma.task.findFirst({ where: { id, userId } });
+  if (!original) {
+    res.status(404).json({ success: false, error: 'Task not found' });
+    return;
+  }
+
+  const task = await prisma.task.create({
+    data: {
+      userId,
+      title: original.title,
+      description: original.description,
+      categoryId: original.categoryId,
+      priority: original.priority,
+      status: 'TODO',
+    },
+    include: { category: true },
+  });
+
+  res.status(201).json({ success: true, data: task });
+}

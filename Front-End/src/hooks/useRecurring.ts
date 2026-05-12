@@ -42,5 +42,21 @@ export function useRecurring() {
     });
   }, []);
 
-  return { tasks, loading, create, update, remove, reorder, refetch: fetch };
+  const duplicate = useCallback(async (id: string) => {
+    const task = await api.post<RecurringTask>(`/recurring/${id}/duplicate`, {});
+    setTasks(prev => [...prev, task]);
+    return task;
+  }, []);
+
+  const batchArchive = useCallback(async (ids: string[], archived: boolean) => {
+    await api.patch('/recurring/batch/archive', { ids, archived });
+    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, archived } : t));
+  }, []);
+
+  const batchDelete = useCallback(async (ids: string[]) => {
+    await api.delete('/recurring/batch', { ids });
+    setTasks(prev => prev.filter(t => !ids.includes(t.id)));
+  }, []);
+
+  return { tasks, loading, create, update, remove, reorder, duplicate, batchArchive, batchDelete, refetch: fetch };
 }

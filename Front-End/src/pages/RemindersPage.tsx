@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { useNotificationContext } from '@/lib/notification-context';
 import type { RemindersResponse, Notification } from '@mundane/types';
 import { Bell, BellOff, CheckCheck, ExternalLink, Clock } from 'lucide-react';
 
 export function RemindersPage() {
+  const { refresh: refreshUnread } = useNotificationContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [meta, setMeta] = useState<RemindersResponse['meta'] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,11 +34,13 @@ export function RemindersPage() {
   const markRead = async (id: string) => {
     await api.patch(`/notifications/reminders/${id}/read`, {});
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    refreshUnread();
   };
 
   const markAllRead = async () => {
     await api.patch('/notifications/reminders/read-all', {});
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    refreshUnread();
   };
 
   const clickReminder = async (n: Notification) => {

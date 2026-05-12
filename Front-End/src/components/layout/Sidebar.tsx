@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { signOut, useSession } from '@/lib/auth-client';
+import { useNotificationContext } from '@/lib/notification-context';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
   CalendarCheck,
   ListTodo,
@@ -12,12 +14,11 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import { api } from '@/lib/api';
 
 const navItems = [
   { to: '/', icon: CalendarCheck, label: 'Today' },
-  { to: '/manage', icon: Layers, label: 'Routines' },
-  { to: '/tasks', icon: ListTodo, label: 'Tasks' },
+  { to: '/manage', icon: Layers, label: 'Recurring' },
+  { to: '/tasks', icon: ListTodo, label: 'OneOffs' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/reminders', icon: Bell, label: 'Reminders' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -26,20 +27,9 @@ const navItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount } = useNotificationContext();
   const { data: session } = useSession();
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const result = await api.get<{ count: number }>('/notifications/reminders/unread-count');
-        setUnreadCount(result.count);
-      } catch {}
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const nav = (
     <nav className="flex flex-col h-full">
@@ -99,7 +89,7 @@ export function Sidebar() {
             </div>
           )}
           <button
-            onClick={() => signOut()}
+            onClick={() => setShowLogoutConfirm(true)}
             className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-bg-raised transition-colors"
             title="Sign out"
           >
@@ -159,6 +149,16 @@ export function Sidebar() {
           {nav}
         </div>
       </aside>
+
+      <ConfirmModal
+        open={showLogoutConfirm}
+        title="Sign out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign out"
+        confirmDanger
+        onConfirm={() => { signOut(); setShowLogoutConfirm(false); }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </>
   );
 }

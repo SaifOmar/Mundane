@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRecurring } from '@/hooks/useRecurring';
 import { useCategories } from '@/hooks/useData';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { toast } from 'sonner';
-import { Plus, Trash2, Archive, RotateCcw, Pencil } from 'lucide-react';
-import type { Frequency, RecurringTask, CreateRecurringTaskInput, UpdateRecurringTaskInput } from '@mundane/types';
+import { Plus, Trash2, Archive, RotateCcw, Pencil, CheckSquare, Square, Copy, X } from 'lucide-react';
+import type { Frequency, RecurringTask, CreateRecurringTaskInput } from '@mundane/types';
 
 const FREQUENCY_OPTIONS: { value: Frequency; label: string }[] = [
   { value: 'DAILY', label: 'Every day' },
@@ -16,8 +17,14 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const EMOJI_OPTIONS = ['✅', '🏋️', '📖', '💻', '🧘', '📝', '💧', '🎯', '🏃', '🎨', '🎵', '🧹', '💊', '🥗', '☕'];
 
+type ContextMenu = {
+  x: number;
+  y: number;
+  task: RecurringTask;
+};
+
 export function ManagePage() {
-  const { tasks, create, update, remove } = useRecurring();
+  const { tasks, create, update, remove, duplicate, batchArchive, batchDelete, refetch } = useRecurring();
   const { categories } = useCategories();
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
@@ -29,9 +36,14 @@ export function ManagePage() {
   const [timeOfDay, setTimeOfDay] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
 
   const activeTasks = tasks.filter(t => !t.archived);
   const archivedTasks = tasks.filter(t => t.archived);
+  const allSelected = activeTasks.length > 0 && selectedIds.size === activeTasks.length;
 
   const resetForm = () => {
     setTitle(''); setIcon('✅'); setFrequency('DAILY');
@@ -55,7 +67,7 @@ export function ManagePage() {
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      const input: any = {
+      const input: Record<string, unknown> = {
         title: title.trim(), icon, frequency,
         daysOfWeek: frequency === 'CUSTOM' ? daysOfWeek : undefined,
         timesPerDay, timeOfDay: timeOfDay || undefined,
@@ -65,7 +77,7 @@ export function ManagePage() {
         await update(editingTask.id, input);
         toast.success('Task updated');
       } else {
-        await create(input);
+        await create(input as unknown as CreateRecurringTaskInput);
         toast.success('Task created');
       }
       resetForm();
@@ -76,11 +88,59 @@ export function ManagePage() {
     setDaysOfWeek(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
   };
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(activeTasks.map(t => t.id)));
+    }
+  }, [allSelected, activeTasks]);
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBatchArchive = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    await batchArchive(ids, true);
+    clearSelection();
+    toast.success(`Archived ${ids.length} task${ids.length !== 1 ? 's' : ''}`);
+  };
+
+  const handleBatchDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    await batchDelete(ids);
+    setBatchDeleteOpen(false);
+    clearSelection();
+    toast.success(`Deleted ${ids.length} task${ids.length !== 1 ? 's' : ''}`);
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      const task = await duplicate(id);
+      toast.success(`Duplicated "${task.title}"`);
+    } catch { toast.error('Failed to duplicate'); }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, task: RecurringTask) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, task });
+  };
+
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
+    <div className="max-w-4xl mx-auto animate-fade-in" onClick={() => setContextMenu(null)}>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Routines</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">Recurring</h1>
           <p className="text-sm text-text-muted mt-1">Manage your recurring tasks</p>
         </div>
         <button
@@ -169,9 +229,74 @@ export function ManagePage() {
         </form>
       )}
 
+      {/* Selection action bar */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <span className="text-sm text-text-primary font-medium">{selectedIds.size} selected</span>
+          <div className="flex gap-1.5 ml-auto">
+            <button onClick={handleBatchArchive}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-raised text-text-secondary hover:text-warning hover:border-warning/30 border border-border-default transition-all">
+              <Archive size={12} /> Archive
+            </button>
+            <button onClick={() => setBatchDeleteOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-bg-raised text-text-secondary hover:text-danger hover:border-danger/30 border border-border-default transition-all">
+              <Trash2 size={12} /> Delete
+            </button>
+            <button onClick={clearSelection}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary transition-colors">
+              <X size={12} /> Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 w-44 rounded-lg bg-bg-surface border border-border-default shadow-xl py-1 animate-scale-in"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button onClick={() => { toggleSelect(contextMenu.task.id); setContextMenu(null); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-primary hover:bg-bg-raised transition-colors text-left">
+            {selectedIds.has(contextMenu.task.id) ? <CheckSquare size={14} /> : <Square size={14} />}
+            Select
+          </button>
+          <button onClick={() => { handleDuplicate(contextMenu.task.id); setContextMenu(null); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-primary hover:bg-bg-raised transition-colors text-left">
+            <Copy size={14} /> Duplicate
+          </button>
+          <button onClick={() => { update(contextMenu.task.id, { archived: true }); setContextMenu(null); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-primary hover:bg-bg-raised transition-colors text-left">
+            <Archive size={14} /> Archive
+          </button>
+          <div className="h-px bg-border-default my-1" />
+          <button onClick={() => { setDeleteId(contextMenu.task.id); setContextMenu(null); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-danger hover:bg-bg-raised transition-colors text-left">
+            <Trash2 size={14} /> Delete
+          </button>
+        </div>
+      )}
+
+      {/* Active tasks */}
+      <div className="mb-3 flex items-center gap-2">
+        <button onClick={toggleSelectAll} className="p-1 rounded text-text-muted hover:text-text-primary transition-colors" title="Select all">
+          {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+        </button>
+        <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">{activeTasks.length} active</span>
+      </div>
+
       <div className="space-y-2 stagger-children">
         {activeTasks.map(task => (
-          <div key={task.id} className="card px-4 py-3 flex items-center gap-3 group">
+          <div
+            key={task.id}
+            onContextMenu={e => handleContextMenu(e, task)}
+            className={`card px-4 py-3 flex items-center gap-3 group transition-all ${selectedIds.has(task.id) ? 'ring-1 ring-amber-500/30 bg-amber-500/5' : ''}`}
+          >
+            <button onClick={() => toggleSelect(task.id)}
+              className="p-0.5 rounded text-text-muted hover:text-text-primary transition-colors flex-shrink-0">
+              {selectedIds.has(task.id) ? <CheckSquare size={16} className="text-amber-400" /> : <Square size={16} />}
+            </button>
             <span className="text-lg">{task.icon}</span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{task.title}</p>
@@ -185,9 +310,10 @@ export function ManagePage() {
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: task.category.color }} title={task.category.name} />
             )}
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => handleDuplicate(task.id)} className="p-1.5 rounded text-text-muted hover:text-amber-400" title="Duplicate"><Copy size={14} /></button>
               <button onClick={() => startEdit(task)} className="p-1.5 rounded text-text-muted hover:text-amber-400" title="Edit"><Pencil size={14} /></button>
               <button onClick={() => update(task.id, { archived: true })} className="p-1.5 rounded text-text-muted hover:text-warning" title="Archive"><Archive size={14} /></button>
-              <button onClick={() => { if (confirm('Delete?')) remove(task.id); }} className="p-1.5 rounded text-text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
+              <button onClick={() => setDeleteId(task.id)} className="p-1.5 rounded text-text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
@@ -219,6 +345,26 @@ export function ManagePage() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={deleteId !== null}
+        title="Delete routine"
+        message="Are you sure you want to delete this routine? This cannot be undone."
+        confirmLabel="Delete"
+        confirmDanger
+        onConfirm={() => { if (deleteId) remove(deleteId); setDeleteId(null); }}
+        onCancel={() => setDeleteId(null)}
+      />
+
+      <ConfirmModal
+        open={batchDeleteOpen}
+        title={`Delete ${selectedIds.size} routines`}
+        message={`Are you sure you want to delete ${selectedIds.size} routines? This cannot be undone.`}
+        confirmLabel="Delete all"
+        confirmDanger
+        onConfirm={handleBatchDelete}
+        onCancel={() => setBatchDeleteOpen(false)}
+      />
     </div>
   );
 }

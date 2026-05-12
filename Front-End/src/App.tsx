@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSession } from '@/lib/auth-client';
+import { NotificationProvider } from '@/lib/notification-context';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TodayPage } from '@/pages/TodayPage';
 import { ManagePage } from '@/pages/ManagePage';
@@ -13,7 +14,7 @@ function ProtectedLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 lg:p-8">
         <Routes>
           <Route path="/" element={<TodayPage />} />
           <Route path="/manage" element={<ManagePage />} />
@@ -49,7 +50,7 @@ export default function App() {
       />
       <Route
         path="/*"
-        element={session ? <ProtectedLayout /> : <Navigate to="/login" replace />}
+        element={session ? <NotificationProvider><ProtectedLayout /></NotificationProvider> : <Navigate to="/login" replace />}
       />
     </Routes>
   );

@@ -131,3 +131,75 @@ export async function reorderRecurringTasks(req: Request, res: Response): Promis
 
   res.json({ success: true });
 }
+
+export async function batchArchiveRecurringTasks(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const { ids, archived } = req.body as { ids: string[]; archived: boolean };
+
+  if (!ids?.length) {
+    res.status(400).json({ success: false, error: 'No task IDs provided' });
+    return;
+  }
+
+  await prisma.recurringTask.updateMany({
+    where: { id: { in: ids }, userId },
+    data: { archived },
+  });
+
+  res.json({ success: true });
+}
+
+export async function batchDeleteRecurringTasks(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const { ids } = req.body as { ids: string[] };
+
+  if (!ids?.length) {
+    res.status(400).json({ success: false, error: 'No task IDs provided' });
+    return;
+  }
+
+  await prisma.recurringTask.deleteMany({
+    where: { id: { in: ids }, userId },
+  });
+
+  res.json({ success: true });
+}
+
+export async function duplicateRecurringTask(req: Request, res: Response): Promise<void> {
+  const { userId } = req as AuthRequest;
+  const id = getParamId(req.params);
+
+  const original = await prisma.recurringTask.findFirst({ where: { id, userId } });
+  if (!original) {
+    res.status(404).json({ success: false, error: 'Task not found' });
+    return;
+  }
+
+  const lastTask = await prisma.recurringTask.findFirst({
+    where: { userId },
+    orderBy: { sortOrder: 'desc' },
+  });
+
+  const task = await prisma.recurringTask.create({
+    data: {
+      userId,
+      title: original.title,
+      icon: original.icon,
+      listId: original.listId,
+      categoryId: original.categoryId,
+      frequency: original.frequency,
+      daysOfWeek: original.daysOfWeek,
+      timesPerDay: original.timesPerDay,
+      timeOfDay: original.timeOfDay,
+      reminderEnabled: original.reminderEnabled,
+      reminderMinutesBefore: original.reminderMinutesBefore,
+      sortOrder: (lastTask?.sortOrder ?? -1) + 1,
+    },
+    include: { category: true, list: true },
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { ...task, daysOfWeek: JSON.parse(task.daysOfWeek) },
+  });
+}

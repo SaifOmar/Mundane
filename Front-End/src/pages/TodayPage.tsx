@@ -13,11 +13,11 @@ function formatDate(dateStr: string): string {
 }
 
 export function TodayPage() {
-  const { data, loading, toggleCompletion } = useToday();
+  const { data, loading, toggleCompletion, refetch } = useToday();
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4 animate-fade-in">
+      <div className="max-w-4xl mx-auto space-y-4 animate-fade-in">
         <div className="skeleton h-8 w-48" />
         <div className="skeleton h-4 w-32" />
         <div className="space-y-3 mt-8">
@@ -37,7 +37,7 @@ export function TodayPage() {
     : 0;
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
+    <div className="max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-text-primary">
@@ -123,7 +123,7 @@ export function TodayPage() {
       )}
 
       {/* Quick add */}
-      <QuickAddTask />
+      <QuickAddTask onAdd={refetch} />
 
       {/* Empty state */}
       {recurringTasks.length === 0 && dueTasks.length === 0 && (

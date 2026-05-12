@@ -1,0 +1,18 @@
+{
+  "recurringTasks": [
+    { "title": "Workout", "frequency": "DAILY", "timeOfDay": "06:00", "categoryName": "Health" },
+    { "title": "HMH 1", "frequency": "DAILY" },
+    { "title": "HMH 2", "frequency": "DAILY" },
+    { "title": "1 Job Application", "frequency": "DAILY", "timeOfDay": "06:00", "categoryName": "Work" },
+    { "title": "Improve cv", "frequency": "DAILY", "timeOfDay": "06:00", "categoryName": "Work" },
+    { "title": "Check email", "frequency": "DAILY", "timeOfDay": "06:00", "categoryName": "Work" },
+    { "title": "SP 1", "frequency": "DAILY", "timeOfDay": "14:00", "categoryName": "Work" },
+    { "title": "Read ma waraa el tabe3a", "frequency": "DAILY", "timeOfDay": "12:00", "categoryName": "Learning" },
+    { "title": "Go out mf", "frequency": "DAILY", "categoryName": "Social" },
+    { "title": "SP 2", "frequency": "DAILY", "timeOfDay": "03:00" },
+    { "title": "HMH 1", "frequency": "DAILY" }
+  ],
+  "tasks": [
+    { "title": "work on obsedian after hmh", "priority": "HIGH" }
+  ]
+}

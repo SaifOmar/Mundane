@@ -11,6 +11,7 @@ import { analyticsRouter } from './routes/analytics.routes';
 import { notificationsRouter } from './routes/notifications.routes';
 import { categoriesRouter } from './routes/categories.routes';
 import { listsRouter } from './routes/lists.routes';
+import { importRouter } from './routes/import.routes';
 import { startScheduler } from './services/scheduler.service';
 import { prisma } from './db';
 
@@ -38,6 +39,7 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/lists', listsRouter);
+app.use('/api/tasks/import', importRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -34,5 +34,33 @@ export function useTasks() {
     setTasks(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  return { tasks, loading, create, update, remove, refetch: fetch };
+  const duplicate = useCallback(async (id: string) => {
+    const task = await api.post<Task>(`/tasks/${id}/duplicate`, {});
+    setTasks(prev => [task, ...prev]);
+    return task;
+  }, []);
+
+  const batchComplete = useCallback(async (ids: string[]) => {
+    await api.patch('/tasks/batch/complete', { ids });
+    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'DONE' as const, completedAt: new Date().toISOString() } : t));
+  }, []);
+
+  const batchDelete = useCallback(async (ids: string[]) => {
+    await api.delete('/tasks/batch', { ids });
+    setTasks(prev => prev.filter(t => !ids.includes(t.id)));
+  }, []);
+
+  const importTasks = useCallback(async (data: {
+    tasks?: CreateTaskInput[];
+    recurringTasks?: Record<string, unknown>[];
+  }) => {
+    return await api.upload<{
+      tasksCreated: number;
+      tasksErrors: string[];
+      recurringCreated: number;
+      recurringErrors: string[];
+    }>('/tasks/import', data);
+  }, []);
+
+  return { tasks, loading, create, update, remove, duplicate, batchComplete, batchDelete, importTasks, refetch: fetch };
 }
