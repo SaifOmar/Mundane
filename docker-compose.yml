@@ -1,0 +1,16 @@
+services:
+  mundane:
+    build: .
+    container_name: mundane
+    restart: unless-stopped
+    ports:
+      - "32768:32768"
+    environment:
+      - PORT=11111
+      - DATABASE_URL=file:./data/mundane.db
+      - FRONTEND_URL=http://localhost:32768
+    volumes:
+      - mundane_data:/app/Back-End/prisma/data
+
+volumes:
+  mundane_data:

@@ -14,7 +14,7 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24,       // refresh if older than 1 day
   },
-  trustedOrigins: [process.env.FRONTEND_URL || 'http://localhost:5173'],
+  trustedOrigins: [process.env.FRONTEND_URL || '*'],
 });
 
 export type Auth = typeof auth;

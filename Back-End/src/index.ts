@@ -15,11 +15,11 @@ import { startScheduler } from './services/scheduler.service';
 import { prisma } from './db';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 11111;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => callback(null, origin || true),
   credentials: true,
 }));
 app.use(morgan('dev'));
