@@ -1,4 +1,4 @@
-# ProjectTasks — Daily Task Tracker with Analytics
+# Mundane — Daily Task Tracker with Analytics
 
 A personal task management app built around one core idea: **recurring daily tasks should be stupidly easy to manage and track over time.**
 
@@ -241,7 +241,7 @@ Wakatime-inspired. Four main visualizations:
 ## Project Structure
 
 ```
-ProjectTasks/
+mundane/
 ├── package.json              # workspace root
 ├── types/                    # shared TypeScript types
 │   ├── package.json

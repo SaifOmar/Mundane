@@ -121,7 +121,7 @@ export function SettingsPage() {
       <section className="card p-5">
         <h2 className="text-sm font-semibold text-text-secondary mb-4">About</h2>
         <p className="text-xs text-text-muted">
-          ProjectTasks — Your local daily task tracker. All data stays on your machine.
+          Mundane — Your local daily task tracker. All data stays on your machine.
         </p>
       </section>
     </div>

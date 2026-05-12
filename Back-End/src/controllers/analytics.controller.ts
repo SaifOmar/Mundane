@@ -2,9 +2,25 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthRequest } from '../middleware/auth.middleware';
 
+function shouldAppearOnDate(task: { frequency: string; daysOfWeek: string; archived: boolean; createdAt: Date }, dateStr: string): boolean {
+  if (task.archived) return false;
+  const taskCreated = task.createdAt.toISOString().split('T')[0];
+  if (dateStr < taskCreated) return false;
+  const date = new Date(dateStr + 'T12:00:00Z');
+  const dow = date.getUTCDay();
+  if (task.frequency === 'DAILY') return true;
+  if (task.frequency === 'WEEKDAYS') return dow >= 1 && dow <= 5;
+  if (task.frequency === 'WEEKENDS') return dow === 0 || dow === 6;
+  if (task.frequency === 'CUSTOM') {
+    const days: number[] = JSON.parse(task.daysOfWeek || '[]');
+    return days.includes(dow);
+  }
+  return true;
+}
+
 function getRangeStart(range: string): string {
   const now = new Date();
-  const days = range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : 365;
+  const days = range === '7d' ? 7 : range === '30d' ? 30 : range === '60d' ? 60 : range === '90d' ? 90 : 365;
   const start = new Date(now);
   start.setDate(start.getDate() - days);
   return start.toISOString().split('T')[0];
@@ -27,42 +43,43 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
   const startDate = getRangeStart(range);
   const endDate = new Date().toISOString().split('T')[0];
 
-  // Fetch all completions in range
   const completions = await prisma.taskCompletion.findMany({
     where: { userId, date: { gte: startDate, lte: endDate } },
     include: { recurringTask: true },
   });
 
-  // Fetch all active recurring tasks
   const tasks = await prisma.recurringTask.findMany({
     where: { userId, archived: false },
   });
 
-  // ─── Heatmap ─────────────────────────────────────────────────────────
   const allDates = dateRange(startDate, endDate);
+
+  // ─── Heatmap ──────────────────────────────────────────────────────────
   const completionsByDate = new Map<string, { completed: number; total: number }>();
 
-  for (const date of allDates) {
-    completionsByDate.set(date, { completed: 0, total: 0 });
-  }
   for (const c of completions) {
     const entry = completionsByDate.get(c.date);
-    if (!entry) continue;
-    entry.total += 1;
-    if (c.completedCount > 0 && !c.skipped) entry.completed += 1;
+    if (!entry) {
+      completionsByDate.set(c.date, { completed: 0, total: 0 });
+    }
+    const e = completionsByDate.get(c.date)!;
+    e.total += 1;
+    if (c.completedCount > 0 && !c.skipped) e.completed += 1;
   }
 
   const heatmap = allDates.map(date => {
-    const entry = completionsByDate.get(date)!;
+    const entry = completionsByDate.get(date);
+    const total = entry?.total ?? 0;
+    const completed = entry?.completed ?? 0;
     return {
       date,
-      completionRate: entry.total > 0 ? entry.completed / entry.total : 0,
-      completed: entry.completed,
-      total: entry.total,
+      completionRate: total > 0 ? completed / total : 0,
+      completed,
+      total,
     };
   });
 
-  // ─── Per-task analytics ──────────────────────────────────────────────
+  // ─── Per-task analytics ───────────────────────────────────────────────
   const perTask = tasks.map(task => {
     const taskCompletions = completions.filter(c => c.recurringTaskId === task.id);
     const completedDays = taskCompletions.filter(c => c.completedCount > 0 && !c.skipped).length;
@@ -70,7 +87,6 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
     const missedDays = taskCompletions.filter(c => c.completedCount === 0 && !c.skipped).length;
     const totalDays = taskCompletions.length;
 
-    // Streak calculation
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
@@ -78,6 +94,7 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
     let streakBroken = false;
 
     for (const date of sortedDates) {
+      if (!shouldAppearOnDate(task, date)) continue;
       const c = taskCompletions.find(tc => tc.date === date);
       const done = c && c.completedCount > 0 && !c.skipped;
       if (done) {
@@ -104,11 +121,11 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
     };
   });
 
-  // ─── Daily trend ────────────────────────────────────────────────────
+  // ─── Daily trend ──────────────────────────────────────────────────────
   const dailyTrend = allDates.map(date => {
-    const dayCompletions = completions.filter(c => c.date === date);
-    const completed = dayCompletions.filter(c => c.completedCount > 0 && !c.skipped).length;
-    const total = dayCompletions.length;
+    const entry = completionsByDate.get(date);
+    const total = entry?.total ?? 0;
+    const completed = entry?.completed ?? 0;
     return {
       date,
       completionRate: total > 0 ? completed / total : 0,
@@ -117,7 +134,7 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
     };
   });
 
-  // ─── Time distribution ──────────────────────────────────────────────
+  // ─── Time distribution ────────────────────────────────────────────────
   const hourCounts = new Array(24).fill(0);
   for (const c of completions) {
     if (c.completedAt) {
@@ -127,7 +144,7 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
   }
   const timeDistribution = hourCounts.map((count, hour) => ({ hour, count }));
 
-  // ─── Skip analysis ──────────────────────────────────────────────────
+  // ─── Skip analysis ────────────────────────────────────────────────────
   const skipAnalysis = tasks.map(task => {
     const tc = completions.filter(c => c.recurringTaskId === task.id);
     return {

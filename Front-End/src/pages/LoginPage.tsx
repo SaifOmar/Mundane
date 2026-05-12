@@ -45,7 +45,7 @@ export function LoginPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-4">
             <span className="text-2xl">✓</span>
           </div>
-          <h1 className="text-xl font-semibold text-text-primary">ProjectTasks</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Mundane</h1>
           <p className="text-sm text-text-muted mt-1">Track your daily habits</p>
         </div>
 

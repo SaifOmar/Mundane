@@ -2,7 +2,7 @@
 
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'ProjectTasks';
+  const title = data.title || 'Mundane';
   const options = {
     body: data.body || 'You have a task reminder',
     icon: '/favicon.svg',

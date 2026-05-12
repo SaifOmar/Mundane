@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useRecurring } from '@/hooks/useRecurring';
 import { useCategories } from '@/hooks/useData';
 import { toast } from 'sonner';
-import { Plus, Trash2, Archive, RotateCcw } from 'lucide-react';
-import type { Frequency } from '@pt/types';
+import { Plus, Trash2, Archive, RotateCcw, Pencil } from 'lucide-react';
+import type { Frequency, RecurringTask, CreateRecurringTaskInput, UpdateRecurringTaskInput } from '@mundane/types';
 
 const FREQUENCY_OPTIONS: { value: Frequency; label: string }[] = [
   { value: 'DAILY', label: 'Every day' },
@@ -20,6 +20,7 @@ export function ManagePage() {
   const { tasks, create, update, remove } = useRecurring();
   const { categories } = useCategories();
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState('✅');
   const [frequency, setFrequency] = useState<Frequency>('DAILY');
@@ -35,22 +36,40 @@ export function ManagePage() {
   const resetForm = () => {
     setTitle(''); setIcon('✅'); setFrequency('DAILY');
     setDaysOfWeek([]); setTimesPerDay(1); setTimeOfDay('');
-    setCategoryId(''); setShowForm(false);
+    setCategoryId(''); setShowForm(false); setEditingTask(null);
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const startEdit = (task: RecurringTask) => {
+    setEditingTask(task);
+    setTitle(task.title);
+    setIcon(task.icon);
+    setFrequency(task.frequency);
+    setDaysOfWeek(task.daysOfWeek || []);
+    setTimesPerDay(task.timesPerDay);
+    setTimeOfDay(task.timeOfDay || '');
+    setCategoryId(task.categoryId || '');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      await create({
+      const input: any = {
         title: title.trim(), icon, frequency,
         daysOfWeek: frequency === 'CUSTOM' ? daysOfWeek : undefined,
         timesPerDay, timeOfDay: timeOfDay || undefined,
         categoryId: categoryId || undefined,
-      });
+      };
+      if (editingTask) {
+        await update(editingTask.id, input);
+        toast.success('Task updated');
+      } else {
+        await create(input);
+        toast.success('Task created');
+      }
       resetForm();
-      toast.success('Task created');
-    } catch { toast.error('Failed to create'); }
+    } catch { toast.error(editingTask ? 'Failed to update' : 'Failed to create'); }
   };
 
   const toggleDay = (day: number) => {
@@ -65,17 +84,15 @@ export function ManagePage() {
           <p className="text-sm text-text-muted mt-1">Manage your recurring tasks</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { resetForm(); setShowForm(!showForm); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-stone-900 text-sm font-medium hover:bg-amber-400 transition-colors"
         >
           <Plus size={16} /> New
         </button>
       </div>
 
-      {/* Create form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="card p-5 mb-6 space-y-4 animate-scale-in">
-          {/* Title + emoji */}
+        <form onSubmit={handleSubmit} className="card p-5 mb-6 space-y-4 animate-scale-in">
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-text-secondary mb-1.5">Title</label>
@@ -85,7 +102,6 @@ export function ManagePage() {
             </div>
           </div>
 
-          {/* Emoji picker */}
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">Icon</label>
             <div className="flex flex-wrap gap-1.5">
@@ -97,7 +113,6 @@ export function ManagePage() {
             </div>
           </div>
 
-          {/* Frequency */}
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">Frequency</label>
             <div className="flex flex-wrap gap-2">
@@ -109,7 +124,6 @@ export function ManagePage() {
             </div>
           </div>
 
-          {/* Custom days */}
           {frequency === 'CUSTOM' && (
             <div className="flex flex-wrap gap-2">
               {DAY_NAMES.map((name, i) => (
@@ -120,7 +134,6 @@ export function ManagePage() {
             </div>
           )}
 
-          {/* Times per day + time of day */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">Times per day</label>
@@ -134,7 +147,6 @@ export function ManagePage() {
             </div>
           </div>
 
-          {/* Category */}
           {categories.length > 0 && (
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">Category</label>
@@ -150,12 +162,13 @@ export function ManagePage() {
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={resetForm} className="px-4 py-2 text-xs text-text-muted hover:text-text-secondary">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-amber-500 text-stone-900 font-medium hover:bg-amber-400">Create</button>
+            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-amber-500 text-stone-900 font-medium hover:bg-amber-400">
+              {editingTask ? 'Save' : 'Create'}
+            </button>
           </div>
         </form>
       )}
 
-      {/* Active task list */}
       <div className="space-y-2 stagger-children">
         {activeTasks.map(task => (
           <div key={task.id} className="card px-4 py-3 flex items-center gap-3 group">
@@ -172,6 +185,7 @@ export function ManagePage() {
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: task.category.color }} title={task.category.name} />
             )}
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => startEdit(task)} className="p-1.5 rounded text-text-muted hover:text-amber-400" title="Edit"><Pencil size={14} /></button>
               <button onClick={() => update(task.id, { archived: true })} className="p-1.5 rounded text-text-muted hover:text-warning" title="Archive"><Archive size={14} /></button>
               <button onClick={() => { if (confirm('Delete?')) remove(task.id); }} className="p-1.5 rounded text-text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
             </div>
@@ -187,7 +201,6 @@ export function ManagePage() {
         </div>
       )}
 
-      {/* Archived */}
       {archivedTasks.length > 0 && (
         <div className="mt-8">
           <button onClick={() => setShowArchived(!showArchived)} className="text-xs text-text-muted hover:text-text-secondary transition-colors">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { TodayData, TaskCompletion } from '@pt/types';
+import type { TodayData, TaskCompletion } from '@mundane/types';
 
 export function useToday() {
   const [data, setData] = useState<TodayData | null>(null);

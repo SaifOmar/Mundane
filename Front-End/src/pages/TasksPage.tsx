@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { toast } from 'sonner';
-import { Plus, Trash2, Check, Circle, Clock } from 'lucide-react';
-import type { Priority } from '@pt/types';
+import { Plus, Trash2, Check, Circle, Clock, Pencil } from 'lucide-react';
+import type { Priority, Task } from '@mundane/types';
 
 const PRIORITY_COLORS = { HIGH: 'text-danger', MEDIUM: 'text-warning', LOW: 'text-text-muted' };
 const PRIORITY_LABELS = { HIGH: 'High', MEDIUM: 'Med', LOW: 'Low' };
@@ -10,6 +10,7 @@ const PRIORITY_LABELS = { HIGH: 'High', MEDIUM: 'Med', LOW: 'Low' };
 export function TasksPage() {
   const { tasks, create, update, remove, loading } = useTasks();
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [dueDate, setDueDate] = useState('');
@@ -21,14 +22,33 @@ export function TasksPage() {
     return true;
   });
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setTitle(''); setPriority('MEDIUM'); setDueDate('');
+    setShowForm(false); setEditingTask(null);
+  };
+
+  const startEdit = (task: Task) => {
+    setEditingTask(task);
+    setTitle(task.title);
+    setPriority(task.priority);
+    setDueDate(task.dueDate || '');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      await create({ title: title.trim(), priority, dueDate: dueDate || undefined });
-      setTitle(''); setPriority('MEDIUM'); setDueDate(''); setShowForm(false);
-      toast.success('Task added');
-    } catch { toast.error('Failed'); }
+      const input = { title: title.trim(), priority, dueDate: dueDate || undefined } as any;
+      if (editingTask) {
+        await update(editingTask.id, input);
+        toast.success('Task updated');
+      } else {
+        await create(input);
+        toast.success('Task added');
+      }
+      resetForm();
+    } catch { toast.error(editingTask ? 'Failed to update' : 'Failed to add'); }
   };
 
   const toggleDone = async (id: string, currentStatus: string) => {
@@ -50,13 +70,12 @@ export function TasksPage() {
           <h1 className="text-2xl font-semibold text-text-primary">Tasks</h1>
           <p className="text-sm text-text-muted mt-1">One-off to-dos</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-stone-900 text-sm font-medium hover:bg-amber-400 transition-colors">
           <Plus size={16} /> New
         </button>
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-1 mb-6 p-1 bg-bg-raised rounded-lg w-fit">
         {(['active', 'all', 'done'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
@@ -66,9 +85,8 @@ export function TasksPage() {
         ))}
       </div>
 
-      {/* Create form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="card p-5 mb-6 space-y-4 animate-scale-in">
+        <form onSubmit={handleSubmit} className="card p-5 mb-6 space-y-4 animate-scale-in">
           <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg bg-bg-raised border border-border-default text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-amber-500/40 transition-all"
             placeholder="Task title" required />
@@ -91,13 +109,14 @@ export function TasksPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-xs text-text-muted">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-amber-500 text-stone-900 font-medium hover:bg-amber-400">Create</button>
+            <button type="button" onClick={resetForm} className="px-4 py-2 text-xs text-text-muted">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-xs rounded-lg bg-amber-500 text-stone-900 font-medium hover:bg-amber-400">
+              {editingTask ? 'Save' : 'Create'}
+            </button>
           </div>
         </form>
       )}
 
-      {/* Task list */}
       <div className="space-y-2 stagger-children">
         {filtered.map(task => (
           <div key={task.id} className={`card px-4 py-3 flex items-center gap-3 group ${task.status === 'DONE' ? 'opacity-50' : ''}`}>
@@ -108,8 +127,11 @@ export function TasksPage() {
             <span className={`text-sm flex-1 ${task.status === 'DONE' ? 'line-through text-text-muted' : 'text-text-primary'}`}>{task.title}</span>
             {task.dueDate && <span className="text-xs text-text-muted flex items-center gap-1"><Clock size={10} />{task.dueDate}</span>}
             <span className={`text-xs font-medium ${PRIORITY_COLORS[task.priority as Priority]}`}>{PRIORITY_LABELS[task.priority as Priority]}</span>
-            <button onClick={() => { if (confirm('Delete?')) remove(task.id); }}
-              className="p-1 rounded text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              <button onClick={() => startEdit(task)} className="p-1 rounded text-text-muted hover:text-amber-400" title="Edit"><Pencil size={14} /></button>
+              <button onClick={() => { if (confirm('Delete?')) remove(task.id); }}
+                className="p-1 rounded text-text-muted hover:text-danger"><Trash2 size={14} /></button>
+            </div>
           </div>
         ))}
       </div>

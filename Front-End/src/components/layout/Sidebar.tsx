@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { signOut, useSession } from '@/lib/auth-client';
 import {
@@ -10,31 +10,47 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 const navItems = [
   { to: '/', icon: CalendarCheck, label: 'Today' },
   { to: '/manage', icon: Layers, label: 'Routines' },
   { to: '/tasks', icon: ListTodo, label: 'Tasks' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/reminders', icon: Bell, label: 'Reminders' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { data: session } = useSession();
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const result = await api.get<{ count: number }>('/notifications/reminders/unread-count');
+        setUnreadCount(result.count);
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const nav = (
     <nav className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border-default">
         <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400 font-bold text-sm flex-shrink-0">
-          PT
+          Mu
         </div>
         {!collapsed && (
           <span className="text-text-primary font-semibold text-sm tracking-wide">
-            ProjectTasks
+            Mundane
           </span>
         )}
       </div>
@@ -56,7 +72,12 @@ export function Sidebar() {
             }
           >
             <Icon size={18} className="flex-shrink-0" />
-            {!collapsed && <span>{label}</span>}
+            {!collapsed && <span className="flex-1">{label}</span>}
+            {!collapsed && to === '/reminders' && unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </div>

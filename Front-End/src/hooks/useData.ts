@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { Category, TaskList } from '@pt/types';
+import type { Category, TaskList } from '@mundane/types';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);

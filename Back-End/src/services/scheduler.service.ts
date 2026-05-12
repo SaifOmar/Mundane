@@ -1,9 +1,9 @@
 import cron from 'node-cron';
 import { prisma } from '../db';
 import { sendPushNotification } from './push.service';
+import { createNotification } from './notifications.service';
 
 export function startScheduler(): void {
-  // Run every minute — check for tasks whose reminder time has come
   cron.schedule('* * * * *', async () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -11,7 +11,6 @@ export function startScheduler(): void {
     const currentMin = now.getMinutes().toString().padStart(2, '0');
     const currentTime = `${currentHour}:${currentMin}`;
 
-    // Find tasks with reminders that should fire now
     const tasks = await prisma.recurringTask.findMany({
       where: {
         archived: false,
@@ -23,7 +22,6 @@ export function startScheduler(): void {
     for (const task of tasks) {
       if (!task.timeOfDay) continue;
 
-      // Calculate the reminder time (task time minus minutes before)
       const [taskHour, taskMin] = task.timeOfDay.split(':').map(Number);
       const taskMinutes = taskHour * 60 + taskMin;
       const reminderMinutes = taskMinutes - task.reminderMinutesBefore;
@@ -33,24 +31,34 @@ export function startScheduler(): void {
 
       if (reminderTime !== currentTime) continue;
 
-      // Check this task isn't already completed today
       const completion = await prisma.taskCompletion.findFirst({
         where: { recurringTaskId: task.id, date: todayStr },
       });
       if (completion?.completedCount && completion.completedCount > 0) continue;
       if (completion?.skipped) continue;
 
-      // Send push to all subscriptions for this user
+      await createNotification({
+        userId: task.userId,
+        title: `${task.icon} ${task.title}`,
+        body: `Reminder: ${task.title}`,
+        url: '/',
+        source: 'system',
+      });
+
       const subs = await prisma.pushSubscription.findMany({
         where: { userId: task.userId },
       });
 
       for (const sub of subs) {
-        await sendPushNotification(sub, {
-          title: `${task.icon} ${task.title}`,
-          body: `Time to: ${task.title}`,
-          url: '/',
-        });
+        await sendPushNotification(
+          sub,
+          {
+            title: `${task.icon} ${task.title}`,
+            body: `Reminder: ${task.title}`,
+            url: '/',
+          },
+          task.userId
+        );
       }
     }
   });

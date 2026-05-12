@@ -6,7 +6,7 @@ import { DailyTrendChart } from '@/components/analytics/DailyTrendChart';
 import { TimeDistributionChart } from '@/components/analytics/TimeDistributionChart';
 import { SkipAnalysisChart } from '@/components/analytics/SkipAnalysisChart';
 
-const RANGES = ['7d', '30d', '90d', '365d'] as const;
+const RANGES = ['7d', '30d', '60d', '90d', '365d'] as const;
 
 export function AnalyticsPage() {
   const [range, setRange] = useState<string>('30d');

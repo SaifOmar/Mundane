@@ -1,4 +1,4 @@
-import type { ApiResponse } from '@pt/types';
+import type { ApiResponse } from '@mundane/types';
 
 const BASE = '/api';
 

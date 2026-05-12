@@ -209,3 +209,33 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+// ═══════════════════════════════════════
+// Notifications / Reminders
+// ═══════════════════════════════════════
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string | null;
+  icon: string | null;
+  url: string | null;
+  source: string;
+  sentAt: string;
+  deliveredAt: string | null;
+  clickedAt: string | null;
+  read: boolean;
+  errorText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RemindersResponse {
+  notifications: Notification[];
+  meta: {
+    nextCursor: string | null;
+    total: number;
+    unreadCount: number;
+  };
+}

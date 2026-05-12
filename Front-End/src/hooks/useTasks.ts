@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { Task, CreateTaskInput, UpdateTaskInput } from '@pt/types';
+import type { Task, CreateTaskInput, UpdateTaskInput } from '@mundane/types';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);

@@ -32,6 +32,7 @@ model User {
   tasks            Task[]
   completions      TaskCompletion[]
   pushSubscriptions PushSubscription[]
+  notifications     Notification[]
 }
 
 model Session {
@@ -195,4 +196,29 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════
+// Notifications (Reminders history)
+// ═══════════════════════════════════════
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  body        String?
+  icon        String?
+  url         String?
+  source      String   @default("push")  // push | system | manual
+  sentAt      DateTime @default(now())
+  deliveredAt DateTime?
+  clickedAt   DateTime?
+  read        Boolean  @default(false)
+  errorText   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
 }

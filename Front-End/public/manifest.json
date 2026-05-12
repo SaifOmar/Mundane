@@ -1,6 +1,6 @@
 {
-  "name": "ProjectTasks — Daily Task Tracker",
-  "short_name": "ProjectTasks",
+  "name": "Mundane",
+  "short_name": "Mundane",
   "description": "Track your daily habits and tasks with analytics",
   "start_url": "/",
   "scope": "/",

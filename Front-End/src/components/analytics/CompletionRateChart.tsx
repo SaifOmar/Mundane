@@ -1,4 +1,4 @@
-import type { PerTaskAnalytics } from '@pt/types';
+import type { PerTaskAnalytics } from '@mundane/types';
 
 export function CompletionRateChart({ data }: { data: PerTaskAnalytics[] }) {
   if (data.length === 0) return <p className="text-sm text-text-muted">No data yet</p>;

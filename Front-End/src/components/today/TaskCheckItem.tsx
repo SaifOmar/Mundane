@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { RecurringTask, TaskCompletion } from '@pt/types';
+import type { RecurringTask, TaskCompletion } from '@mundane/types';
 import { Check, SkipForward, RotateCcw, MessageSquare } from 'lucide-react';
 
 interface Props {

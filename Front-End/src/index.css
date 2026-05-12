@@ -50,6 +50,7 @@
 
 body {
   margin: 0;
+  font-size: 18px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);

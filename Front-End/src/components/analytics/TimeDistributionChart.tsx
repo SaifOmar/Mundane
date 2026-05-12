@@ -1,5 +1,5 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import type { TimeDistribution } from '@pt/types';
+import type { TimeDistribution } from '@mundane/types';
 
 export function TimeDistributionChart({ data }: { data: TimeDistribution[] }) {
   const hasData = data.some(d => d.count > 0);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import type { RecurringTask, CreateRecurringTaskInput, UpdateRecurringTaskInput } from '@pt/types';
+import type { RecurringTask, CreateRecurringTaskInput, UpdateRecurringTaskInput } from '@mundane/types';
 
 export function useRecurring() {
   const [tasks, setTasks] = useState<RecurringTask[]>([]);

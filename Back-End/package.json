@@ -11,10 +11,11 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "db:seed": "ts-node-dev src/seed.ts",
+    "db:seed-reminders": "npx tsx src/seed-reminders.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@pt/types": "file:../types",
+    "@mundane/types": "file:../types",
     "@prisma/client": "^6.19.3",
     "better-auth": "^1.2.0",
     "cors": "^2.8.6",

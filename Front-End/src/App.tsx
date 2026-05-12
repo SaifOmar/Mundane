@@ -6,6 +6,7 @@ import { ManagePage } from '@/pages/ManagePage';
 import { TasksPage } from '@/pages/TasksPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { RemindersPage } from '@/pages/RemindersPage';
 import { LoginPage } from '@/pages/LoginPage';
 
 function ProtectedLayout() {
@@ -18,6 +19,7 @@ function ProtectedLayout() {
           <Route path="/manage" element={<ManagePage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/reminders" element={<RemindersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

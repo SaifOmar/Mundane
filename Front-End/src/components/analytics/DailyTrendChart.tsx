@@ -1,5 +1,5 @@
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
-import type { DailyTrend } from '@pt/types';
+import type { DailyTrend } from '@mundane/types';
 
 export function DailyTrendChart({ data }: { data: DailyTrend[] }) {
   if (data.length === 0) return <p className="text-sm text-text-muted">No data yet</p>;

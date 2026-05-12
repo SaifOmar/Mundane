@@ -1,4 +1,4 @@
-import type { SkipAnalysis } from '@pt/types';
+import type { SkipAnalysis } from '@mundane/types';
 
 export function SkipAnalysisChart({ data }: { data: SkipAnalysis[] }) {
   if (data.length === 0) return <p className="text-sm text-text-muted">No data yet</p>;

@@ -1,4 +1,4 @@
-# ProjectTasks — Build Tracker
+# Mundane — Build Tracker
 
 ## Phase 1: Foundation
 - [x] Root monorepo + workspace setup

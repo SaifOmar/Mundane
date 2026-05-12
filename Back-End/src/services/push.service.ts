@@ -1,6 +1,7 @@
 import webpush from 'web-push';
+import { prisma } from '../db';
+import { createNotification } from './notifications.service';
 
-// Initialize VAPID details if keys are available
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     process.env.VAPID_EMAIL || 'mailto:admin@localhost',
@@ -24,8 +25,23 @@ interface PushSub {
 
 export async function sendPushNotification(
   sub: PushSub,
-  payload: PushPayload
+  payload: PushPayload,
+  userId?: string
 ): Promise<void> {
+  let notificationId: string | null = null;
+
+  if (userId) {
+    const notif = await createNotification({
+      userId,
+      title: payload.title,
+      body: payload.body,
+      icon: payload.icon,
+      url: payload.url,
+      source: 'push',
+    });
+    notificationId = notif.id;
+  }
+
   try {
     await webpush.sendNotification(
       {
@@ -34,8 +50,20 @@ export async function sendPushNotification(
       },
       JSON.stringify(payload)
     );
+
+    if (userId && notificationId) {
+      await prisma.notification.update({
+        where: { id: notificationId },
+        data: { deliveredAt: new Date() },
+      });
+    }
   } catch (err: any) {
-    // Subscription expired or invalid — log but don't throw
     console.warn(`Push failed for ${sub.endpoint.slice(0, 40)}...`, err?.statusCode);
+    if (userId && notificationId) {
+      await prisma.notification.update({
+        where: { id: notificationId },
+        data: { errorText: `Status: ${err?.statusCode || 'unknown'}` },
+      });
+    }
   }
 }
