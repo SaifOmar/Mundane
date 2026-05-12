@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════
+// Better Auth — managed tables
+// ═══════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions         Session[]
+  accounts         Account[]
+  verifications    Verification[]
+  categories       Category[]
+  taskLists        TaskList[]
+  recurringTasks   RecurringTask[]
+  tasks            Task[]
+  completions      TaskCompletion[]
+  pushSubscriptions PushSubscription[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  expiresAt             DateTime?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User?   @relation(fields: [identifier], references: [email])
+}
+
+// ═══════════════════════════════════════
+// Categories
+// ═══════════════════════════════════════
+
+model Category {
+  id        String  @id @default(cuid())
+  userId    String?        // null = system default
+  name      String
+  color     String         // hex color
+  icon      String         // emoji
+  isDefault Boolean @default(false)
+
+  user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recurringTasks RecurringTask[]
+  tasks          Task[]
+}
+
+// ═══════════════════════════════════════
+// Task Lists (routines)
+// ═══════════════════════════════════════
+
+model TaskList {
+  id        String  @id @default(cuid())
+  userId    String
+  name      String
+  icon      String  @default("📋")
+  isDefault Boolean @default(false)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recurringTasks RecurringTask[]
+}
+
+// ═══════════════════════════════════════
+// Recurring Tasks
+// ═══════════════════════════════════════
+
+model RecurringTask {
+  id                    String   @id @default(cuid())
+  userId                String
+  listId                String?
+  categoryId            String?
+  title                 String
+  icon                  String   @default("✅")
+  // Scheduling
+  frequency             String   @default("DAILY")  // DAILY | WEEKDAYS | WEEKENDS | CUSTOM
+  daysOfWeek            String   @default("[]")      // JSON: [0,1,2,3,4,5,6]
+  timesPerDay           Int      @default(1)
+  timeOfDay             String?  // "09:00"
+  // Reminders
+  reminderEnabled       Boolean  @default(false)
+  reminderMinutesBefore Int      @default(15)
+  // Meta
+  sortOrder             Int      @default(0)
+  archived              Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list        TaskList?       @relation(fields: [listId], references: [id])
+  category    Category?       @relation(fields: [categoryId], references: [id])
+  completions TaskCompletion[]
+}
+
+// ═══════════════════════════════════════
+// Task Completions — one row per task per day
+// ═══════════════════════════════════════
+
+model TaskCompletion {
+  id              String   @id @default(cuid())
+  recurringTaskId String
+  userId          String
+  date            String   // "2026-05-12" — ISO date string, no time
+  completedCount  Int      @default(0)  // for timesPerDay > 1
+  skipped         Boolean  @default(false)
+  completedAt     String?  // ISO datetime of last completion
+  note            String?
+
+  recurringTask RecurringTask @relation(fields: [recurringTaskId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recurringTaskId, date])
+}
+
+// ═══════════════════════════════════════
+// One-off Tasks
+// ═══════════════════════════════════════
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  categoryId  String?
+  title       String
+  description String?
+  dueDate     String?  // ISO date string
+  priority    String   @default("MEDIUM")  // LOW | MEDIUM | HIGH
+  status      String   @default("TODO")    // TODO | IN_PROGRESS | DONE
+  completedAt String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+}
+
+// ═══════════════════════════════════════
+// Push Notification Subscriptions
+// ═══════════════════════════════════════
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

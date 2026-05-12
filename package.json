@@ -1,0 +1,10 @@
+{
+  "name": "project-tasks",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "types",
+    "Back-End",
+    "Front-End"
+  ]
+}
